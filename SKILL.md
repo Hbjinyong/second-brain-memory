@@ -25,8 +25,41 @@ description: |
 
 # 第二大脑记忆系统
 
-**版本**：V1.2  
+**版本**：V1.3  
 **更新日期**：2026-03-30
+
+---
+
+## ⚠️ 前提条件 - memory-hook 必须启用
+
+**重要**：本skill依赖OpenClaw内置的`memory-hook`组件实现自动触发，必须确保该hook已启用。
+
+### 检查方法
+
+在OpenClaw配置文件 `openclaw.json` 中检查：
+
+```json
+{
+  "hooks": {
+    "internal": {
+      "enabled": true,
+      "entries": {
+        "memory-hook": {
+          "enabled": true    // ← 必须为 true
+        }
+      }
+    }
+  }
+}
+```
+
+### 如果未启用
+
+手动修改 `openclaw.json`（位于 `~/.openclaw/openclaw.json`），添加或修改上述配置，然后**重启OpenClaw**使配置生效。
+
+### 为什么需要memory-hook
+
+`memory-hook` 是OpenClaw内核级别的消息监听组件，负责在对话中自动检测触发词并调用skill的存储/检索功能。没有它，skill的隐式触发词无法自动生效。
 
 ---
 
@@ -68,7 +101,11 @@ description: |
 
 ## 快速开始
 
-### 初始化系统
+### 1. 确认memory-hook已启用
+
+详见上方「前提条件」章节。
+
+### 2. 初始化系统
 
 ```python
 import os
@@ -95,7 +132,7 @@ ks = get_knowledge_system(
 )
 ```
 
-### 存储记忆（核心接口）
+### 3. 存储记忆（核心接口）
 
 ```python
 import os
@@ -137,7 +174,7 @@ print(f"记忆ID: {result.get('memory_id')}")   # 存储成功时有值
 
 ---
 
-### 检索记忆（核心接口）
+### 4. 检索记忆（核心接口）
 
 ```python
 # FTS全文检索
@@ -158,7 +195,7 @@ for r in results:
 
 ---
 
-### 权限管理
+### 5. 权限管理
 
 ```python
 # 授权访问
@@ -173,7 +210,7 @@ has_access = ks.check_permission(agent_id="bravo", knowledge_id="mem_123")
 
 ---
 
-### 统计分析
+### 6. 统计分析
 
 ```python
 stats = ks.get_stats()
@@ -218,7 +255,7 @@ print(f"归档层: {stats['archive']}")
 | "搜一下XXX" | 检索记忆 | `search()` |
 | "查看统计" | 查询状态 | `get_stats()` |
 
-### 隐式触发（AI语义自动检测，无需用户说出发送词）
+### 隐式触发（AI语义自动检测，需memory-hook启用）
 
 | 用户说 | 系统做 | 触发机制 |
 |--------|--------|----------|
@@ -361,16 +398,27 @@ sqlite3 data/memory_db "SELECT archive_level, COUNT(*) FROM memories GROUP BY ar
 
 ## 注意事项
 
-1. **FTS检索**：当前使用SQLite LIKE实现全文检索，无需额外模型
-2. **向量搜索**：ChromaDB向量模块已集成但默认未启用（需要本地嵌入模型）
-3. **LLM API**：必须配置API密钥才能生成摘要和标签，建议使用环境变量
-4. **归档触发**：归档由定时任务或手动调用触发，非实时
-5. **字段命名说明**：memories表中字段名为 vector_summary（LLM生成的文本摘要，非向量数据），兼容性已测试通过
-6. **错误处理**：建议在生产环境使用带重试机制的存储函数
+1. **memory-hook前提**：必须确保OpenClaw的`memory-hook`已启用，否则隐式触发词无法生效
+2. **FTS检索**：当前使用SQLite LIKE实现全文检索，无需额外模型
+3. **向量搜索**：ChromaDB向量模块已集成但默认未启用（需要本地嵌入模型）
+4. **LLM API**：必须配置API密钥才能生成摘要和标签，建议使用环境变量
+5. **归档触发**：归档由定时任务或手动调用触发，非实时
+6. **字段命名说明**：memories表中字段名为 vector_summary（LLM生成的文本摘要，非向量数据），兼容性已测试通过
+7. **错误处理**：建议在生产环境使用带重试机制的存储函数
 
 ---
 
 ## 故障排查
+
+### 隐式触发不生效
+
+`
+问题：说"总结"、"教训"时没有自动触发存储
+排查步骤：
+1. 检查openclaw.json中memory-hook是否已启用
+2. 重启OpenClaw使配置生效
+3. 确认skill已正确安装
+`
 
 ### 存储失败
 
@@ -415,6 +463,7 @@ sqlite3 data/memory_db "SELECT archive_level, COUNT(*) FROM memories GROUP BY ar
 | V1.0 | 2026-03-29 | 初始版本，包含核心存储/检索/归档/权限功能 |
 | V1.1 | 2026-03-29 | 修复P0问题2个（中等问题）+P1轻微3个+P2轻微2个，通过复审 |
 | V1.2 | 2026-03-30 | 新增隐式触发词（AI语义自动检测）：总结/经验/教训/规则/方法/方案/规划/计划/团队协作/复杂问题 |
+| V1.3 | 2026-03-30 | 新增前提条件说明：memory-hook必须启用配置 |
 
 ---
 
